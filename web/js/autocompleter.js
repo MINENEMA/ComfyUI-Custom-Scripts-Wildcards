@@ -78,11 +78,19 @@ function parseCSV(csvText) {
 }
 
 async function getCustomWords() {
-	const resp = await api.fetchApi("/pysssss/autocomplete", { cache: "no-store" });
-	if (resp.status === 200) {
-		return await resp.text();
-	}
-	return undefined;
+    const resp = await api.fetchApi("/pysssss/autocomplete", { cache: "no-store" });
+    if (resp.status === 200) {
+        return await resp.text();
+    }
+    return undefined;
+}
+
+async function getWildcards() {
+    const resp = await api.fetchApi("/pysssss/wildcards", { cache: "no-store" });
+    if (resp.status === 200) {
+        return await resp.json();
+    }
+    return {};
 }
 
 async function addCustomWords(text) {
@@ -142,6 +150,20 @@ async function addCustomWords(text) {
 	}
 }
 
+async function addWildcards() {
+    const wildcards = await getWildcards();
+    for (const [filename, entries] of Object.entries(wildcards)) {
+        const words = {};
+        for (const entry of entries) {
+            words[entry] = { 
+                text: entry,
+                hint: `Wildcard: ${filename}`
+            };
+        }
+        TextAreaAutoComplete.updateWords(`pysssss.wildcards.${filename}`, words);
+    }
+}
+
 function toggleLoras() {
 	[TextAreaAutoComplete.globalWords, TextAreaAutoComplete.globalWordsExclLoras] = [
 		TextAreaAutoComplete.globalWordsExclLoras,
@@ -167,107 +189,102 @@ class EmbeddingInfoDialog extends ModelInfoDialog {
 }
 
 class CustomWordsDialog extends ComfyDialog {
-	async show() {
-		const text = await getCustomWords();
-		this.words = $el("textarea", {
-			textContent: text,
-			style: {
-				width: "70vw",
-				height: "70vh",
-			},
-		});
+    async show() {
+        const text = await getCustomWords();
+        this.words = $el("textarea", {
+            textContent: text,
+            style: {
+                width: "70vw",
+                height: "70vh",
+            },
+        });
 
-		const input = $el("input", {
-			style: {
-				flex: "auto",
-			},
-			value:
-				"https://gist.githubusercontent.com/pythongosssss/1d3efa6050356a08cea975183088159a/raw/a18fb2f94f9156cf4476b0c24a09544d6c0baec6/danbooru-tags.txt",
-		});
+        const input = $el("input", {
+            style: {
+                flex: "auto",
+            },
+            value:
+                "https://gist.githubusercontent.com/pythongosssss/1d3efa6050356a08cea975183088159a/raw/a18fb2f94f9156cf4476b0c24a09544d6c0baec6/danbooru-tags.txt",
+        });
 
-		super.show(
-			$el(
-				"div",
-				{
-					style: {
-						display: "flex",
-						flexDirection: "column",
-						overflow: "hidden",
-						maxHeight: "100%",
-					},
-				},
-				[
-					$el("h2", {
-						textContent: "Custom Autocomplete Words",
-						style: {
-							color: "#fff",
-							marginTop: 0,
-							textAlign: "center",
-							fontFamily: "sans-serif",
-						},
-					}),
-					$el(
-						"div",
-						{
-							style: {
-								color: "#fff",
-								fontFamily: "sans-serif",
-								display: "flex",
-								alignItems: "center",
-								gap: "5px",
-							},
-						},
-						[
-							$el("label", { textContent: "Load Custom List: " }),
-							input,
-							$el("button", {
-								textContent: "Load",
-								onclick: async () => {
-									try {
-										const res = await fetch(input.value);
-										if (res.status !== 200) {
-											throw new Error("Error loading: " + res.status + " " + res.statusText);
-										}
-										this.words.value = await res.text();
-									} catch (error) {
-										alert("Error loading custom list, try manually copy + pasting the list");
-									}
-								},
-							}),
-						]
-					),
-					this.words,
-				]
-			)
-		);
-	}
+        super.show(
+            $el("div", {
+                style: {
+                    display: "flex",
+                    flexDirection: "column",
+                    overflow: "hidden",
+                    maxHeight: "100%",
+                },
+            }, [
+                $el("h2", {
+                    textContent: "Custom Autocomplete Words",
+                    style: {
+                        color: "#fff",
+                        marginTop: 0,
+                        textAlign: "center",
+                        fontFamily: "sans-serif",
+                    },
+                }),
+                $el("div", {
+                    style: {
+                        color: "#fff",
+                        fontFamily: "sans-serif",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "5px",
+                    },
+                }, [
+                    $el("label", { textContent: "Load Custom List: " }),
+                    input,
+                    $el("button", {
+                        textContent: "Load",
+                        onclick: async () => {
+                            try {
+                                const res = await fetch(input.value);
+                                if (res.status !== 200) {
+                                    throw new Error("Error loading: " + res.status + " " + res.statusText);
+                                }
+                                this.words.value = await res.text();
+                            } catch (error) {
+                                alert("Error loading custom list, try manually copy + pasting the list");
+                            }
+                        },
+                    }),
+                ]),
+                this.words,
+            ])
+        );
+    }
 
-	createButtons() {
-		const btns = super.createButtons();
-		const save = $el("button", {
-			type: "button",
-			textContent: "Save",
-			onclick: async (e) => {
-				try {
-					const res = await api.fetchApi("/pysssss/autocomplete", { method: "POST", body: this.words.value });
-					if (res.status !== 200) {
-						throw new Error("Error saving: " + res.status + " " + res.statusText);
-					}
-					save.textContent = "Saved!";
-					addCustomWords(this.words.value);
-					setTimeout(() => {
-						save.textContent = "Save";
-					}, 500);
-				} catch (error) {
-					alert("Error saving word list!");
-					console.error(error);
-				}
-			},
-		});
+    createButtons() {
+        const btns = super.createButtons();
+        const save = $el("button", {
+            type: "button",
+            textContent: "Save",
+            onclick: async (e) => {
+                try {
+                    const res = await api.fetchApi("/pysssss/autocomplete", { 
+                        method: "POST", 
+                        body: this.words.value 
+                    });
+                    if (res.status !== 200) {
+                        throw new Error("Error saving: " + res.status + " " + res.statusText);
+                    }
+                    save.textContent = "Saved!";
+                    addCustomWords(this.words.value);
+                    setTimeout(() => {
+                        save.textContent = "Save";
+                    }, 500);
+                } catch (error) {
+                    alert("Error saving word list!");
+                    console.error(error);
+                }
+            },
+        });
 
-		btns.unshift(save);
-		return btns;
-	}
+        btns.unshift(save);
+        return btns;
+    }
 }
 
 const id = "pysssss.AutoCompleter";
@@ -571,7 +588,7 @@ app.registerExtension({
 		}
 
 		// store global words with/without loras
-		Promise.all([addEmbeddings(), addCustomWords()])
+		Promise.all([addEmbeddings(), addCustomWords(), addWildcards()])
 			.then(() => {
 				TextAreaAutoComplete.globalWordsExclLoras = Object.assign({}, TextAreaAutoComplete.globalWords);
 			})
