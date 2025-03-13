@@ -1,7 +1,7 @@
 # ComfyUI-Custom-Scripts
 
 # Wildcards
-Added wildcard autocomplete functionality, looking up all matches within every txt in wildcards folder
+Added wildcard autocomplete functionality, looking up all matches within every txt in wildcards folder   
 default wildcard folder is from comfyui-impact-pack 
 
 ### ⚠️ While these extensions work for the most part, i'm very busy at the moment and so unable to keep on top of everything here, thanks for your patience!
