@@ -661,7 +661,9 @@ export class TextAreaAutoComplete {
 	}
 
 	#escapeParentheses(text) {
-		return text.replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+		text = text.replace(/(?<!\\)\(/g, '\\(');
+		text = text.replace(/(?<!\\)\)/g, '\\)');
+		return text;
 	  }
 
 	#hide() {
